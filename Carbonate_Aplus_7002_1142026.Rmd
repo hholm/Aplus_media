@@ -1,0 +1,427 @@
+---
+title: "A+ Media Model of Carbonate System for Syn7002 Expirements"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+This file contains code for a PHREEQC Model of A+ media. The goal is too accurately model the carbonate system of the media under different CO2 conditions. The model is then compared with lab observations.
+
+### Load Libraries and Functions
+```{r}
+# install if needed
+library(phreeqc)
+library(tidyphreeqc)
+library(tidyverse)
+library(seacarb)
+library(gt)
+library(future.apply)
+library(patchwork)
+
+library(here)
+
+ggplot2::set_theme(theme_minimal())
+
+# helper function - create media
+create_media <- function(salts) {
+  x <- list()
+
+  # Store the salts from the input
+  x$salts <- salts
+  
+  # Calculate mmol of salts
+  x$mmol_salts <- purrr::map(x$salts, function(salt) { salt * 1000 })
+  
+  # Calculate total salts
+  x$total_salts <- sum(unlist(x$mmol_salts))
+  
+  # Calculate ratios of each salt
+  x$ratios <- purrr::map(x$mmol_salts, function(salt_mmol) { salt_mmol / x$total_salts })
+  
+  # Prepare the reaction using tidyphreeqc::phr_reaction, only including salts listed in the input
+  reaction_args <- purrr::map2(x$ratios, names(x$ratios), ~ setNames(list(.x), .y))
+  
+  # Combine all arguments into a single list and add the Reaction_amount and units
+  reaction_args <- c(reaction_args, list(Reaction_amount = x$total_salts, units = "millimoles"))
+  
+  # Use do.call to pass the list of arguments to phr_reaction
+  x$react <- do.call(tidyphreeqc::phr_reaction, reaction_args)
+  
+  return(x)
+}
+
+# helper function - set up model
+initialize_model <- function(temps, CO2_levels, media, pressure) {
+  x <- list()
+
+  # Store the provided temps
+  x$temps <- temps
+
+  # Initialize the solution list
+  sol <- lapply(x$temps, function(temp) {
+    solution <- phr_solution(
+      .name = "media",
+      pH = 7,
+      units = "mmol/kgw",
+      density = 1.000,
+      temp = temp,
+      water = 1
+    )
+    solution$components$pH <- paste(solution$components$pH, "charge")
+    return(solution)
+  })
+
+  # Assign CO2 levels
+  x$CO2_levels <- log10((CO2_levels / 1e6 * pressure))
+
+  # Lab air equilibrium phases
+  air <- phr_equilibrium_phases(
+    "CO2(g)" = c(log10(430 / 1e6), 1)
+  )
+
+  # Equilibrium phases for samples based on CO2 levels
+  x$co2_equilibrium <- lapply(x$CO2_levels, function(x) {
+    phr_equilibrium_phases(
+      "CO2(g)" = c(x, 1) # ,
+      # "Ntg(g)" = c(log10(0.78), 1),
+      # "O2(g)" = c(log10(0.21), 1)
+    )
+  })
+
+  # Molalities and activities of interest
+  x$molalities <- c(
+    "HCO3-", "H2CO3", "NaHCO3", "MgHCO3+", "CaHCO3+",
+    "MgCO3", "NaCO3-", "CO3-2"
+  )
+  x$activities <- c(
+    "HCO3-", "H2CO3", "NaHCO3", "MgHCO3+", "CaHCO3+",
+    "MgCO3", "NaCO3-", "CO3-2"
+  )
+
+  # Initialize solution and salt information
+  x$solution.info <- rep(list(a = sol), times = length(names(media)))
+  names(x$solution.info) <- names(media)
+  x$salt.info <- media
+
+  cat("Initialized solution info for", length(x$solution.info[[1]]), "samples in", length(x$salt.info), "media types.")
+
+  return(x)
+}
+
+# helper function - run model
+run_lab_model <- function(x, file = NA) {
+  out <- list()
+
+  # Run model for each solution type
+  for (j in 1:length(names(x$salt.info))) {
+    Tris <- 100 / 157.60 * 1000 # equal amount of Tris and HCl
+    HCl <- 100 / 157.60 * 1000 # equal amount of Tris and HCl
+    NaOH <- 405.8219 # enough NaOH to get exactly pH 8.2 as per proticol
+
+    # Equilibrate
+    final <- future_lapply(seq_along(x$temps), function(i) {
+      input <- phr_input(
+        phr_use_db_minteq.v4(), # using minteq becuase it has definitions for buffers
+        phr_solution_master_species(
+          element_name = "Tris", # explictly add Tris buffer in database
+          master_species = "Tris",
+          alkalinity = 1,
+          element_gram_formula_weight = 121.14
+        ),
+        phr_solution_species("Tris = Tris"),
+        phr_solution_species("Tris + H+ = H(Tris)+",
+          analytical_expression = c(
+            -3.447362e+04, -2.171243e+01, 6.705737e+05,
+            1.521538e+04, 1.491300e+05, 1.186811e-02
+          ) # ,
+          # log_k = 8.076 # average of values at 25C on PubChem,
+          # see below for analytical expression calc
+        ),
+        phr_solution(
+          .name = "Tris_Stock",
+          .number = 2,
+          temp = x$solution.info[[j]][[i]]$components$temp,
+          pH = 7,
+          units = "mmol/kgw"
+        ),
+        phr_reaction(
+          .number = 2,
+          HCl = (HCl / (Tris + HCl + NaOH)),
+          Tris = (Tris / (Tris + HCl + NaOH)),
+          NaOH = (NaOH / (Tris + HCl + NaOH)),
+          Reaction_amount = Tris + HCl + NaOH,
+          units = "millimoles"
+        ),
+        phr_input_section("SAVE solution 2"),
+        phr_end(),
+        x$solution.info[[j]][[i]], # Initial solution
+        phr_mix(.number = 3, "1" = 0.99, "2" = "0.01"),
+        x$salt.info[[j]],
+        x$co2_equilibrium[[i]] # Equilibration with atmosphere
+      )
+
+      out <- phr_run(
+        input,
+        phr_selected_output(
+          temp = TRUE, time = TRUE, simulation = TRUE,
+          reaction = TRUE, alkalinity = TRUE,
+          ionic_strength = TRUE, water = TRUE,
+          state = TRUE, totals = c("C", "C(4)", "C(-4)"),
+          molalities = x$molalities,
+          activities = x$activities
+        ), # Ions to return
+        phr_input_section("PRINT
+                          -alkalinity true"),
+        phr_end() # End model
+      )
+      if (!is.na(file)) {
+        prints <- out %>%
+          phr_print_output() %>%
+          capture.output(
+            file = stringr::str_replace(
+              file,
+              pattern = ".txt",
+              replacement = paste0("_", i, ".txt")
+            )
+          )
+      }
+      list(
+        dfs = out %>% as_tibble()
+      )
+    })
+
+    out[[names(x$salt.info[j])]][["data.frame"]] <- map_dfr(final, "dfs")
+    # out[[names(x$salt.info[j])]][["print_output"]] <- str_c(
+    #  str_replace_all(flatten_chr(map(my_list, "b")), "\\\\n", "\n"),
+    #  collapse = "\n"
+    # )
+  }
+  cat("Modeled", nrow(out[[1]]), "samples for", length(out), "media types.")
+  return(out)
+}
+
+quiet <- function(x) { #Hadley Wickham quiet function
+  sink(tempfile()) 
+  on.exit(sink()) 
+  invisible(force(x)) 
+} 
+
+```
+
+### Temperature Dependence of Tris logk
+```{r}
+library(minpack.lm)
+
+tris_logk <- read.csv(here("data/pubchem_cid_6503_iupacpka.csv"))
+
+# drop outliers
+tris_logk <- tris_logk[-which(tris_logk$pka > 8.75),]
+
+# calculate delta (not used)
+tris_logk$deltapka <- tris_logk$pka-mean(tris_logk[which(tris_logk$temperature == "25"),"pka"])
+
+# convert temp to kelvin
+tris_logk$temperature <- tris_logk$temperature + 273.15
+
+formula <- pka ~ A1 + A2 * temperature + A3 / temperature +
+  A4 * log10(temperature) + A5 / temperature^2 + A6 * temperature^2
+
+fit <- nlsLM(
+  formula,
+  start = list(A1 = 5, A2 = 0.01, A3 = 0.01, A4 = 0.01, A5 = 0.001, A6 = 0.001),
+  data = tris_logk
+)
+
+
+temperature = seq(5,60)+273.15
+fit_df <- data.frame(temperature) %>%
+  mutate(pka_fit = predict(fit,newdata = data.frame(temperature)))
+
+tris_logk %>% ggplot() +
+  geom_point(aes(temperature,pka)) +
+  geom_line(aes(temperature,pka_fit),data = fit_df)
+
+fit_summary <- fit %>% summary()
+fit_summary <- fit_summary$coefficients %>% data.frame()
+fit_summary$Estimate
+
+```
+
+### Calculate Additions
+```{r}
+# To ~800 ml ddiH2O add in order:
+# 	18g NaCl
+# 	5g MgSO4*7H2O
+# 	10ml Na2EDTA*2H2O 3g/L
+# 	10ml KCl 60g/L
+# 	10ml CaCl2*2H2O 37g/L
+# 	10ml NaNO3 100g/L
+# 	10ml KH2PO4 5g/L
+# 	10ml Tris HCl 100g/L pH 8.2
+# 	10ml trace components (add slowly)
+
+Aplus_grams <- c(NaCl = 18, MgSO4_7H2O = 5, Na2EDTA_2H2O = 3*(10/1000),
+                 KCl = 60*(10/1000), CaCl2 = 37*(10/1000),
+                 NaNO3 = 100*(10/1000), KH2PO4 = 5*(10/1000),
+                 TrisHCl = 100*(10/1000))
+
+Aplus_grams_per_mol <- c(NaCl = 58.44, MgSO4_7H2O = 246.48, Na2EDTA_2H2O = 374.24,
+                 KCl = 74.55, CaCl2_2H2O = 147.01,
+                 NaNO3 = 84.99, KH2PO4 = 136.086,
+                 TrisHCl = 157.60)
+
+Aplus_mols <- Aplus_grams/Aplus_grams_per_mol
+
+Aplus_mols[["H3BO3"]] <- 55*(1/1000)*(10/1000) #55mM * (1M / 1000 mM) * (10ml/1000ml)
+Aplus_mols[["NH4+"]] <- 0.3*(1/1000)*(10/1000) #0.3mM * (1M / 1000 mM) * (10ml/1000ml)
+Aplus_mols[["Citrate"]] <- 0.3*(1/1000)*(10/1000) #0.3mM * (1M / 1000 mM) * (10ml/1000ml)
+
+Aplus <- create_media(
+  list(
+    NaCl = Aplus_mols[["NaCl"]],
+    MgSO4 = Aplus_mols[["MgSO4_7H2O"]],
+    Na2H2Edta = Aplus_mols[["Na2EDTA_2H2O"]],
+    KCl = Aplus_mols[["KCl"]],
+    CaCl2 = Aplus_mols[["CaCl2"]],
+    NaNO3 = Aplus_mols[["NaNO3"]],
+    #Tris = Aplus_mols[["TrisHCl"]], #added later with pH correction
+    H3BO3 = Aplus_mols[["H3BO3"]],
+    KH2PO4 = Aplus_mols[["KH2PO4"]],
+    "NH4+" = Aplus_mols[["NH4+"]],
+    Citrate = Aplus_mols[["Citrate"]]
+  )
+)
+ 
+Aplus_mols
+
+```
+
+### Create our solutions
+```{r}
+#run model - base conditions
+lab_testing <- initialize_model(
+  temps = c(37,37,37),
+  CO2_levels =  c(400, 10000,30000),
+  media = list(Aplus = Aplus$react),
+  pressure = 0.821 # boulder Colorado
+)
+
+results <- run_lab_model(lab_testing, file = here("results/aplus_media.txt"))
+cat("\n")
+
+mods_cond <- results$Aplus$data.frame %>%
+  subset(state == "react")
+
+# compare to data
+obs <- read.csv(here("data/pH_data.csv"))
+
+#run model
+lab_testing <- initialize_model(
+  temps = rep(37,nrow(obs)),
+  CO2_levels =  obs$CO2...*1e4,
+  media = list(Aplus = Aplus$react),
+  pressure = 0.821 # boulder Colorado
+)
+
+results <- run_lab_model(lab_testing, file = here("results/aplus_media.txt"))
+cat("\n")
+
+mods <- results$Aplus$data.frame %>%
+  subset(state == "react")
+
+# model a range
+seq <- c(seq(1,400,length.out = 100),seq(400,30000,length.out = 1000),10000) %>% unique() #using 1 ppm as low
+line <- initialize_model(
+  temps = rep(37,length(seq)),
+  CO2_levels = seq,
+  media = list(Aplus = Aplus$react),
+  pressure = 0.821
+)
+
+results_line <- run_lab_model(line)
+cat("\n")
+
+results_line <- results_line$Aplus$data.frame %>%
+  subset(state == "react") %>%
+  mutate(pCO2 = seq)
+
+
+
+```
+
+### Plot
+```{r}
+
+compare <- data.frame(mods,
+           pH.measured = obs$pH,
+           pCO2 = obs$CO2....) %>%
+  mutate(pH.modeled = pH) %>% select(-pH)
+
+# growth error
+find_closest <- function(vector, target) {
+  which.min(abs(vector - as.numeric(target)))
+}
+
+results_line$pH_err <- results_line$pH+0.17
+
+for (i in 1:length(results_line$pH_err)) {
+ results_line[i,"pH_err_line"] <- results_line$pH[find_closest(results_line$pH,results_line[i,"pH_err"])]
+ results_line[i,"pCO2_err"] <- results_line$pCO2[find_closest(results_line$pH,results_line[i,"pH_err"])]
+}
+
+obs_cond <- read.csv(here("data/DIC_conditions.csv"))
+
+compare_cond <- data.frame(mods_cond,
+           pH.measured = obs_cond$pH_initial,
+           pCO2 = obs_cond$pCO2.in.percent*1e4) %>%
+  mutate(pH.modeled = pH) %>% select(-pH)
+
+
+compare_err <- data.frame()
+
+for (i in 1:length(compare)) {
+  compare_err  <- rbind(compare_err,results_line[find_closest(results_line$pH,compare_cond[i,"pH.modeled"]+0.17),]) #nist
+}
+
+compare_err$pH-compare$pH.modeled
+
+results_line_plot <- results_line %>%
+  subset(!(pH < compare_cond$pH.modeled[1] & pH > compare_err$pH[2])) %>%
+  subset(!(pH < compare_cond$pH.modeled[2] & pH > compare_err$pH[3]))
+
+results_line_plot <- results_line_plot %>%
+  mutate(cond = if_else(pH > 6.75,3,NA),
+         cond = if_else(pH > 7,2,cond),
+         cond = if_else(pH > 7.75,1,cond))
+
+compare %>%
+  ggplot() + geom_point(aes(pH.modeled,pH.measured),size = 3) + geom_abline(linetype = "dashed") +
+  theme_minimal() + labs(y = "pH, Measured", x = "pH, Modeled") +
+compare_cond %>%
+  ggplot() +
+  geom_line(aes(pCO2,pH,group = cond),data = results_line_plot) +
+  geom_point(aes(pCO2,pH.modeled),size = 3) +
+  geom_point(aes(pCO2,pH),data = compare_err) +
+  theme_minimal() + labs(color = "") + theme(legend.position = "right") +
+  labs(y = "pH, Modeled", x = "pCO2, Modeled (ppm)") +
+  patchwork::plot_annotation(tag_levels = "A")
+
+carbonate <- compare_cond %>%
+  mutate(pH = pH.modeled,
+         DIC = (C.mol.kgw.)*1e6,
+         CO2 = (m_H2CO3.mol.kgw.)*1e6,
+         HCO3 =  (m_HCO3..mol.kgw.+m_NaHCO3.mol.kgw.+ m_MgHCO3..mol.kgw.+m_CaHCO3..mol.kgw.)*1e6,
+         CO3 = (m_MgCO3.mol.kgw. + m_NaCO3..mol.kgw. + m_CO3.2.mol.kgw.)*1e6,
+         ALK = (Alk.eq.kgw.)*1e6
+         ) %>%
+  select(pCO2,pH,DIC,CO2,HCO3,CO3,ALK)
+
+carbonate
+
+```
+
+

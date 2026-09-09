@@ -1,0 +1,37 @@
+﻿pkatype,cid,sid,pka,temperature,pressure,solvent,remarks,method,citation,pkadesc
+pKaH1,6503,496129511,8.221,20,"","",(m) I=0.005 to 0.2 From ref. and extrapolation to m=0,"","R. G. Bates and G. D. Pinching. J. Res. Natl. Bur. Std. 43, 519 (1949).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.076,25,"","",(m) I=0.005 to 0.2 From ref. and extrapolation to m=0,"","R. G. Bates and G. D. Pinching. J. Res. Natl. Bur. Std. 43, 519 (1949).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.937,30,"","",(m) I=0.005 to 0.2 From ref. and extrapolation to m=0,"","R. G. Bates and G. D. Pinching. J. Res. Natl. Bur. Std. 43, 519 (1949).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.03,25,"","",(m) I=0.005 to 0.2 From ref. and extrapolation to m=0,"","S. Glasstone and A. F. Schram. J. Am. Chem. Soc. 69, 1213 (1947).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.1,30,"","","C=0.1, I=1, 'mixed' constant","","T. C. Bruice and J. L. York. J. Am. Chem. Soc. 83, 1382 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.85,"","","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.6774,5,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.5164,10,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.3616,15,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.2138,20,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.0746,25,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.9344,30,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.8031,35,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.6772,40,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.5543,45,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.4365,50,"","",(m) I=0.008 to 0.1,"","R. G. Bates and H. B. Hetzer. J. Phys. Chem. 65, 667 (1961).",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.663,5,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.369,15,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,8.079,25,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.805,35,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.551,45,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496129511,7.325,55,"","",(m) I=0.008 to 0.1,"","S. P. Datta and A. K. Graybowsli: Unpublished, quoted in preceeding reference.",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.8553,23,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.6792,5,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.5158,10,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.3602,15,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.2124,20,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.0686,25,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.9336,30,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.8006,35,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.6756,40,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.5515,45,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.438,50,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.3204,55,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,7.2098,60,"","","(m),  I=0.02-0.10 corrected for complex formation with Ag","","",Dissociation constant of the first conjugate acid
+pKaH1,6503,496128606,8.12,23,"","","C=0.01M, I=0.01","","",Dissociation constant of the first conjugate acid
